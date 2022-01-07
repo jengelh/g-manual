@@ -149,8 +149,8 @@ next boot and immediately.
 .. image:: nginx-2.png
 
 In this screenshot, we also requested the installation of the nginx VTS module,
-which is optionally used by AAPI for reporting traffic statistics. VTS is
-**not** available for all platforms, in which case you have to omit make do
+which AAPI can *optionally* for reporting traffic statistics. VTS is
+**not** available for all platforms, in which case you have to omit and make do
 without it.
 
 Being the main entrypoint for everything, the nginx HTTPS network service,
