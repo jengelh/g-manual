@@ -134,14 +134,25 @@ Install ``nginx``. (...)
 5. MariaDB
 ==========
 
-Install MariaDB/MySQL and have the service started both on next boot and
-immediately, then create a blank database and a user that can access it.
+MariaDB/MySQL is used to store the user database amongst a few auxiliary
+configuration parameters. If you plan on erecting a multi-host Gromox cluster,
+this database is the one that is meant to be globally available to all nodes
+that will eventually be running Gromox services.
+
+A preexisting MariaDB/MySQL server may be used. All the standard tools and
+procedures that the world community has developed around SQL are applicable, in
+terms of e.g. configuration, backup/restore, and replication.
+
+Assuming though that you are going for a new SQL server instance, source the
+MariaDB/MySQL packages from your environment, and have the service started both
+on next boot and immediately.
 
 .. image:: mysql-1.png
 
 .. image:: mysql-2.png
 
-Following that, create a blank database and user identity for accessing it.
+After the installation, do create a blank database and user identity for
+accessing it.
 
 .. image:: mysql-3.png
 
@@ -154,20 +165,34 @@ Following that, create a blank database and user identity for accessing it.
 6. Gromox
 =========
 
-Install the package:
+Gromox is the central groupware server component of grommunio. It provides
+the services for Outlook RPC, IMAP/POP3, an LDA for ingestion, and a PHP
+module for Z-MAPI.
+
+The package is available by way of the Grommunio repositories. This guide is
+subsequently based on such a pre-built Gromox. Experts wishing to build from
+source and who have general knowledge on how to do so are referred to the
+(https://github.com/grommunio/gromox/doc/install.rst)[Gromox installation
+documentation] on specific aspects of the build procedure.
 
 .. image:: gromox-1.png
 
-Then specify the MariaDB connection parameters by placing them in
-``/etc/gromox/mysql_adaptor.cfg``:
-
-.. code-block::
+The connection parameters for MariaDB need to be conveyed to Gromox with the
+file ``/etc/gromox/mysql_adaptor.cfg``, whose contents could look like this::
 
 	mysql_username=grommunio
 	mysql_password=freddledgruntbuggly
 	mysql_dbname=grommunio
+	schema_upgrade=host:mail.route27.test
 
-Subsequently, perform the initial table creation:
+The final line about ``schema_upgrade=``, while not a connection parameter in
+its own right, declares that this very host will be the authoritative entity
+that is allowed to perform database schema upgrades. Having this line is
+desirable, because the Gromox default setting is not to perform any schema
+upgrades — this is in consideration of possible multi-host Gromox setups.
+
+With Gromox instrumented on the SQL parameters, proceed now with performing the
+initial creation of the database tables by issuing the command:
 
 .. code-block::
 
