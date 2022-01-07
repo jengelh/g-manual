@@ -130,7 +130,43 @@ leisure.
 .. image:: repodeb-3.png
 
 
-4. nginx
+4. TLS certificates
+===================
+
+Self-signed certificate
+-----------------------
+
+A self-signed certificate is a quick and dirty means to get network traffic
+encrypted. It is a method to get by with the bare minimums. Be aware that
+clients such as Outlook, Thunderbird, etc. will show a warning dialog to the
+end-user if they are presented with a self-signed certificate because of the
+lack of verification inherent to this type of certificate. Anyhow, it is a
+quick and dirty method to get going.
+
+First, ensure that the openssl utility is available in your environment.
+
+.. image:: tls-1.png
+
+Then issue the command to create a certificate. Here, openssl is instructed to
+split the public part and private key in two different files. The parts could
+likewise be emitted to the same filename, because the private key is not
+transmitted over the network by the TLS library even if the file contains both
+parts together.
+
+.. code-block::
+
+	openssl req -x509 -nodes -new -out g.pem -keyout g.key
+
+This will present an interactive questionnaire about what the metadata fields
+of the certificate shall contain, i.e. who this certificate is supposed to be
+for. Other than a hostname, a self-signed certificate needs nothing, which is
+why we leave it all blank in our example. The meaning of the dot character is
+explained by openssl.
+
+.. image:: tls-2.png
+
+
+5. nginx
 ========
 
 nginx is used as a frontend to handle all HTTP requests, and to forward them to
@@ -153,12 +189,14 @@ which AAPI can *optionally* for reporting traffic statistics. VTS is
 **not** available for all platforms, in which case you have to omit and make do
 without it.
 
+{{Install SSL certificate}}
+
 Being the main entrypoint for everything, the nginx HTTPS network service,
 generally port 443, will need to be configured in the packet filter to be
 accessible.
 
 
-5. MariaDB
+6. MariaDB
 ==========
 
 MariaDB/MySQL is used to store the user database amongst a few auxiliary
@@ -194,7 +232,7 @@ on using it in a multi-host Grommunio setup, or when your plans about database
 replication demand it.
 
 
-6. Gromox
+7. Gromox
 =========
 
 Gromox is the central groupware server component of grommunio. It provides
@@ -239,7 +277,11 @@ be reachable from other Gromox nodes in a multi-host grommunio setup for
 reasons of internal forwarding to a mailbox's home server.
 
 
-7. Administration interface
+8. Postfix
+==========
+
+
+9. Administration interface
 ===========================
 
 Install ``grommunio-admin-api``
@@ -252,13 +294,13 @@ Fragments are placed in /usr/share/grommunio-common/...
 In the nginx configuration, include this fragment ...
 
 
-8. Create first user
+10. Create first user
 ====================
 
 ...
 
 
-9. Outlook connection
+11. Outlook connection
 =====================
 
 ...
