@@ -25,7 +25,7 @@ For this particular container, I had enabled ``systemd-networkd`` and put the
 network configuration in place apriori. If anything, this section is but a
 reminder to hook up the host to Internet, as it will be needed to get at
 package repositories later. The particular method of network configuration
-varies wildly between Linux distributions, and not every system is using
+varies wildly between operating systems, and not every system is using
 systemd-networkd. Consult the documentation relevant for your environment to
 get online.
 
@@ -33,6 +33,11 @@ get online.
 
 IPv6 is mandatory on the host itself. If you have ``::1`` assigned, all is
 good.
+
+You are well advised to install and configure a packet filter, a.k.a. a
+firewall, with the sensible default of disallowing every service by default,
+save perhaps for a way to let yourself in. More details will be presented
+throughout the sections going forward.
 
 
 2. Declare hostname identity
@@ -54,9 +59,9 @@ network.
 3. Package manager setup
 ========================
 
-Visit ``download.grommunio.com`` to get an idea of the list of platforms for
+Visit `<https://download.grommunio.com>`_ to get an idea of the list of platforms for
 which pre-built packages have been made available. Even though different
-distribution projects may use the same archive format (RPM, DEB, etc.) or
+operating systems may use the same archive format (RPM, DEB, etc.) or
 repository metadata formats (rpm-md, apt), do not use a repository which does
 not exactly match your system. Do not use Debian packages for an Ubuntu system
 or vice-versa. Do not use openSUSE packages for a Fedora system or vice-versa.
@@ -125,10 +130,32 @@ leisure.
 .. image:: repodeb-3.png
 
 
-4. NGINX
+4. nginx
 ========
 
-Install ``nginx``. (...)
+nginx is used as a frontend to handle all HTTP requests, and to forward them to
+further individual services. For example, RPC/HTTP requests will be delegated
+to Gromox for further processing, Administration API (AAPI for short) requests
+will be delegated to an uwsgi instance for further processing, and {{something
+about g-chat}}.
+
+An alternative HTTP server may be used if you feel comfortable in configuring
+all of it, however this guide will only focus on nginx. Now then, source the
+nginx package from your operating system, and have the service started both on
+next boot and immediately.
+
+.. image:: nginx-1.png
+
+.. image:: nginx-2.png
+
+In this screenshot, we also requested the installation of the nginx VTS module,
+which is optionally used by AAPI for reporting traffic statistics. VTS is
+**not** available for all platforms, in which case you have to omit make do
+without it.
+
+Being the main entrypoint for everything, the nginx HTTPS network service,
+generally port 443, will need to be configured in the packet filter to be
+accessible.
 
 
 5. MariaDB
@@ -144,8 +171,8 @@ procedures that the world community has developed around SQL are applicable, in
 terms of e.g. configuration, backup/restore, and replication.
 
 Assuming though that you are going for a new SQL server instance, source the
-MariaDB/MySQL packages from your environment, and have the service started both
-on next boot and immediately.
+MariaDB/MySQL packages from your operating system, and have the service started
+both on next boot and immediately.
 
 .. image:: mysql-1.png
 
@@ -161,6 +188,11 @@ accessing it.
 	CREATE DATABASE `grommunio`;
 	GRANT ALL ON `grommunio`.* TO 'grommunio'@'localhost' IDENTIFIED BY 'freddledgruntbuggly';
 
+The MariaDB network service is not meant to be open to the public Internet.
+Within your private network, it may need to be opened if (and only if) you plan
+on using it in a multi-host Grommunio setup, or when your plans about database
+replication demand it.
+
 
 6. Gromox
 =========
@@ -172,8 +204,8 @@ module for Z-MAPI.
 The package is available by way of the Grommunio repositories. This guide is
 subsequently based on such a pre-built Gromox. Experts wishing to build from
 source and who have general knowledge on how to do so are referred to the
-(https://github.com/grommunio/gromox/doc/install.rst)[Gromox installation
-documentation] on specific aspects of the build procedure.
+[https://github.com/grommunio/gromox/doc/install.rst](Gromox installation
+documentation) on specific aspects of the build procedure.
 
 .. image:: gromox-1.png
 
@@ -199,6 +231,12 @@ initial creation of the database tables by issuing the command:
 	gromox-dbop -C
 
 .. image:: gromox-2.png
+
+Gromox runs a number of processes and network services. None of them are meant
+to be open to the public Internet, because nginx is already that important
+point of ingress. The Gromox exmdb service (port 5000/tcp by default) needs to
+be reachable from other Gromox nodes in a multi-host grommunio setup for
+reasons of internal forwarding to a mailbox's home server.
 
 
 7. Administration interface
