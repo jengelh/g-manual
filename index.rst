@@ -16,6 +16,87 @@ it in boot, in package management or configuration of services.
 . . . Too complicated? Then use the grommunio Appliance.
 
 
+0.1. Scale out considerations
+=============================
+
+To deploy grommunio over multiple hosts/containers/etc., each host needs to be
+populated with a base operating system and the grommunio packages (all, or a
+subset).
+
+In case of deployment to a dedicated host (bare metal or virtual machine), the
+base OS and packages can be provided by the ISO/OVA appliance images. The
+filesystem tree from the RAW image can be used for container environments
+(boot-from-directory). Equally though, you can install a base OS of choice
+yourself and fill it with the grommunio packages.
+
+YOU decide how you want to split the required resources (CPUs, RAM, disk)
+across hosts. You can put all mailboxes and all services on a single monster
+machine, or you can create one container for every individual mailbox and every
+individual user-facing service. Both extremes are possible, though not
+necessarily cost-effective. One big iron machine may cost more to procure than
+two irons of half the size. Likewise, running two mailboxes rather than one per
+container is more effective because the operating system and processes need not
+be replicated that often. However you split it is a determination YOU must
+make.
+
+
+0.2. Components
+===============
+
+Services that can be placed on different nodes:
+
+* LDAP/IDM
+* SQL DB for user metadata
+* Mailbox nodes
+  * gromox-http/exmdb:
+    * Provides a minimalist API on port 5000 to serialize SQLite access.
+    * Only little state (state which is visible to all consuming service
+      at the same time), e.g. search folders.
+  * gromox-http:
+    * Provides a HTTP server on port 443 or alternatively 10443 depending on
+      configuration.
+    * Performs user authentication. Connects to MySQL or LDAP.
+    * Provides the handler for AutoDiscover URIs.
+      Connects to exmdb to read the mailbox.
+    * Provides the handler for MAPI URIs.
+      Connects to exmdb to read the mailbox.
+    * Keeps the Outlook session state, e.g. object handles.
+* PHP nodes
+  * gromox-zcore
+    * Provides a minimalist API on an AF_LOCAL socket
+    * Performs user authentication. Connects to MySQL or LDAP.
+    * Keeps the grommunio-web session state, e.g. --
+    * Connects to exmdb to read the mailbox.
+  * php-fpm: provides a FastCGI API on port 9001
+    * runs grommunio-web PHP code
+    * connects to gromox-zcore for state and mailbox access
+* Load balancer (optional), e.g. nginx (port 443)
+  * proxying to 9001 for URIs belonging to grommunio-web
+  * proxying to 10443 for URIs belonging to OXDISCO, MAPI, RPC
+* gromox-midb
+  * Caches mailbox data to speed up IMAP access.
+  * Provides a trivial API on port 5000 for this IMAP-level meta data
+  * Connects to exmdb to read/write the mailbox.
+* gromox-imap
+  * Performs user authentication. Connects to MySQL or LDAP.
+  * Provides IMAP on port 143.
+  * Connects to midb to read/write the mailbox.
+* gromox-pop3
+  * Performs user authentication. Connects to MySQL or LDAP.
+  * Provides IMAP on port 143.
+  * Connects to midb to read/write the mailbox.
+* gromox-delivery
+  * Mail ingester on port 24.
+  * Connects to midb to write metadata.
+  * Connects to exmdb to write mailbox.
+* postfix or other MTA
+  * Optionally performs user authentication (e.g. outgoing mail).
+    Connects to MySQL or LDAP.
+  * Provides SMTP on port 25, optionally 587.
+  * Connects to gromox-delivery for mail ingesting.
+* grommunio-chat/meet
+
+
 1. Establish networking
 =======================
 
