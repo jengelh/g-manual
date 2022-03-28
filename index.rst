@@ -46,55 +46,108 @@ make.
 Services that can be placed on different nodes:
 
 * LDAP/IDM
-* SQL DB for user metadata
+
+* MariaDB/MySQL for user metadata
+
 * Mailbox nodes
-  * gromox-http/exmdb:
-    * Provides a minimalist API on port 5000 to serialize SQLite access.
+
+  * gromox-http/exmdb_provider:
+
+    * Provides a trivial API on port 5000 to serialize SQLite access.
+
     * Only little state (state which is visible to all consuming service
       at the same time), e.g. search folders.
+
   * gromox-http:
-    * Provides a HTTP server on port 443 or alternatively 10443 depending on
-      configuration.
-    * Performs user authentication. Connects to MySQL or LDAP.
+
+    * Application server with HTTP on port 10443.
+
+    * Performs user authentication. Connects to MariaDB and optionally LDAP.
+
     * Provides the handler for AutoDiscover URIs.
       Connects to exmdb to read the mailbox.
+
     * Provides the handler for MAPI URIs.
       Connects to exmdb to read the mailbox.
+
     * Keeps the Outlook session state, e.g. object handles.
+
 * PHP nodes
+
   * gromox-zcore
-    * Provides a minimalist API on an AF_LOCAL socket
-    * Performs user authentication. Connects to MySQL or LDAP.
+
+    * Provides a trivial API on an AF_LOCAL socket
+
+    * Performs user authentication. Connects to MariaDB and optionally LDAP.
+
     * Keeps the grommunio-web session state, e.g. --
+
     * Connects to exmdb to read the mailbox.
+
   * php-fpm: provides a FastCGI API on port 9001
+
     * runs grommunio-web PHP code
+
     * connects to gromox-zcore for state and mailbox access
-* Load balancer (optional), e.g. nginx (port 443)
-  * proxying to 9001 for URIs belonging to grommunio-web
-  * proxying to 10443 for URIs belonging to OXDISCO, MAPI, RPC
+
+* Frontend HTTP server (possibly as load balancers), e.g. nginx on port 443
+
+  * Proxies to 9001 for URIs belonging to grommunio-web
+
+  * Proxies to 10443 for URIs belonging to OXDISCO, MAPI, RPC
+
+  * Proxies to an uwsgi for URIs belonging to admin-api
+
+  * Serves up flat files (e.g. for grommunio-web/chat/meet/admin-web)
+
 * gromox-midb
+
   * Caches mailbox data to speed up IMAP access.
+
   * Provides a trivial API on port 5000 for this IMAP-level meta data
+
   * Connects to exmdb to read/write the mailbox.
+
 * gromox-imap
-  * Performs user authentication. Connects to MySQL or LDAP.
+
+  * Performs user authentication. Connects to MariaDB and optionally LDAP.
+
   * Provides IMAP on port 143.
+
   * Connects to midb to read/write the mailbox.
+
 * gromox-pop3
-  * Performs user authentication. Connects to MySQL or LDAP.
+
+  * Performs user authentication. Connects to MariaDB and optionally LDAP.
+
   * Provides IMAP on port 143.
+
   * Connects to midb to read/write the mailbox.
+
 * gromox-delivery
+
   * Mail ingester on port 24.
+
   * Connects to midb to write metadata.
+
   * Connects to exmdb to write mailbox.
+
 * postfix or other MTA
+
   * Optionally performs user authentication (e.g. outgoing mail).
-    Connects to MySQL or LDAP.
+    Connects to MariaDB and optionally LDAP.
+
   * Provides SMTP on port 25, optionally 587.
+
   * Connects to gromox-delivery for mail ingesting.
-* grommunio-chat/meet
+
+* grommunio-chat
+
+  * Connects to MariaDB and optionally LDAP for authentication.
+
+* grommunio-meet
+
+  * Connects to MariaDB and optionally LDAP for authentication.
 
 
 1. Establish networking
@@ -173,6 +226,11 @@ time you install anything).
 .. image:: repo-2.png
 
 .. image:: repo-3.png
+
+.. code-block::
+
+	curl https://download.grommunio.com/RPM-GPG-KEY-grommunio >gr.key
+	rpm --import gr.key
 
 dnf
 ---
@@ -264,12 +322,12 @@ configuration parameters. If you plan on erecting a multi-host Gromox cluster,
 this database is the one that is meant to be globally available to all nodes
 that will eventually be running Gromox services.
 
-A preexisting MariaDB/MySQL server may be used. All the standard tools and
+A preexisting MariaDB server may be used. All the standard tools and
 procedures that the world community has developed around SQL are applicable, in
 terms of e.g. configuration, backup/restore, and replication.
 
 Assuming though that you are going for a new SQL server instance, source the
-MariaDB/MySQL packages from your operating system, and have the service started
+MariaDB packages from your operating system, and have the service started
 both on next boot and immediately.
 
 .. image:: mysql-1.png
