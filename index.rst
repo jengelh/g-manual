@@ -145,9 +145,13 @@ Services that can be placed on different nodes:
 
   * Connects to MariaDB and optionally LDAP for authentication.
 
+  * Mattermost application server with HTTP on port 8065.
+
 * grommunio-meet
 
   * Connects to MariaDB and optionally LDAP for authentication.
+
+  * Prosody application server with XMPP on port 5280.
 
 
 1. Establish networking
@@ -275,8 +279,8 @@ leisure.
 nginx is used as a frontend to handle all HTTP requests, and to forward them to
 further individual services. For example, RPC/HTTP requests will be delegated
 to Gromox for further processing, Administration API (AAPI for short) requests
-will be delegated to an uwsgi instance for further processing, and {{something
-about g-chat}}.
+will be delegated to an uwsgi instance for further processing, and Mattermost
+requests to the chat API.
 
 An alternative HTTP server may be used if you feel comfortable in configuring
 all of it, however this guide will only focus on nginx. Now then, source the
