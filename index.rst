@@ -375,8 +375,9 @@ module for Z-MAPI.
 The package is available by way of the Grommunio repositories. This guide is
 subsequently based on such a pre-built Gromox. Experts wishing to build from
 source and who have general knowledge on how to do so are referred to the
-[https://github.com/grommunio/gromox/doc/install.rst](Gromox installation
-documentation) on specific aspects of the build procedure.
+`Gromox installation documentation
+<https://github.com/grommunio/gromox/doc/install.rst>`_ on specific aspects of
+the build procedure.
 
 .. image:: gromox-1.png
 
