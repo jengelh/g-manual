@@ -356,6 +356,14 @@ Within your private network, it may need to be opened if (and only if) you plan
 on using it in a multi-host Grommunio setup, or when your plans about database
 replication demand it.
 
+In certain versions, such as MySQL 8 on Ubuntu 20.04, the GRANT statement no
+longer implicitly creates users. At this point, one will need
+
+.. code-block:: sql
+
+	CREATE USER 'grommunio'@'localhost' IDENTIFIED BY 'freddledgruntbuggly';
+	GRANT ALL ON `grommunio`.* TO 'grommunio'@'localhost';
+
 
 7. Gromox
 =========
