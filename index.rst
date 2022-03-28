@@ -272,6 +272,9 @@ leisure.
 
 .. image:: repodeb-3.png
 
+For Ubuntu installations, the ``universe`` repository is required in addition
+to the base install.
+
 
 4. nginx
 ========
