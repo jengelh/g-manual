@@ -311,6 +311,16 @@ initial fragment loading still needs to be explicitly done.
 5. TLS certificates
 ===================
 
+Advance list about which entities will prospectively need access to the
+certificate(s):
+
+* nginx
+
+* postfix, if TLS is desired
+
+* gromox, operating as the ``gromox`` system account (this account is created as part
+  of the installation of the ``gromox`` package)
+
 Self-signed certificate
 -----------------------
 
