@@ -401,18 +401,26 @@ file ``/etc/gromox/mysql_adaptor.cfg``, whose contents could look like this::
 	mysql_dbname=grommunio
 	schema_upgrade=host:mail.route27.test
 
-The final line about ``schema_upgrade=``, while not a connection parameter in
-its own right, declares that this very host will be the authoritative entity
-that is allowed to perform database schema upgrades. Having this line is
-desirable, because the Gromox default setting is not to perform any schema
-upgrades — this is in consideration of possible multi-host Gromox setups.
+The data stored in MariaDB is shared among all mailbox nodes in a clustered
+setup. Table schema (DDL) changes are necessary at times, but at most one node
+in such a cluster should perform these changes to avoid running the risk of
+corruption. The hostname after ``host:`` specifies which machine will be
+considered authoritative, if any. The ``schema_upgrade=host:...`` line should
+be consistent across all mailbox nodes. It is possible to completely omit
+``schema_upgrade``, at which point no updates will be done automatically.
 
 With Gromox instrumented on the SQL parameters, proceed now with performing the
 initial creation of the database tables by issuing the command:
 
-.. code-block::
+.. code-block:: sh
 
 	gromox-dbop -C
+
+Manual updates can be performed later with
+
+.. code-block:: sh
+
+	gromox-dbop -U
 
 .. image:: gromox-2.png
 
