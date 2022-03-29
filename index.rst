@@ -301,9 +301,11 @@ without it.
 
 Being the main entrypoint for everything, the nginx HTTPS network service,
 generally port 443, will need to be configured in the packet filter to be
-accessible.
+accessible (publicly).
 
-We will return to TLS certificate installation in a later section.
+We have a support package that contains premade configuration fragments
+for nginx. Do install ``grommunio-common`` to have these to the filesystem. The
+initial fragment loading still needs to be explicitly done.
 
 
 5. TLS certificates
@@ -409,6 +411,37 @@ to be open to the public Internet, because nginx is already that important
 point of ingress. The Gromox exmdb service (port 5000/tcp by default) needs to
 be reachable from other Gromox nodes in a multi-host grommunio setup for
 reasons of internal forwarding to a mailbox's home server.
+
+The first services which need no further configuration can be enabled:
+
+.. code-block:: sh
+
+	systemctl enable --now gromox-event gromox-timer
+
+Now edit ``/etc/gromox/http.cfg``, where a few modifications will need to be
+made, such as specifying the locations of the TLS certificate files.
+Furthermore, because we have set up nginx earlier as a frontend to listen on
+ports 80 and 443, gromox-http needs to be moved "out the way" (its built-in
+defaults are also 80/443). A manual page is provided with all the configuration
+directives and can be called up with ``man 8gx http``.
+
+.. code-block::
+
+	listen_port=10080
+	listen_ssl_port=10443
+	http_support_ssl=yes
+	http_certificate_path=certificate.pem
+	http_private_key=certificate.key
+
+With this, ``gromox-http`` can be launched.
+
+.. code-block:: sh
+
+	systemctl enable --now gromox-http
+
+
+8. PHP-FPM
+==========
 
 
 8. Postfix
