@@ -449,7 +449,7 @@ directives and can be called up with ``man 8gx http``.
 	listen_ssl_port=10443
 	http_support_ssl=yes
 	http_certificate_path=certificate.pem
-	http_private_key=certificate.key
+	http_private_key_path=certificate.key
 
 With this, ``gromox-http`` can be launched.
 
