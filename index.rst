@@ -1,5 +1,7 @@
-0. Introduction
-===============
+.. sectnum::
+
+Introduction
+============
 
 This document shall show, in a 27-step process, how to install Grommunio
 components manually. It is targeted at adept administrators. Pictured above and
@@ -16,8 +18,8 @@ it in boot, in package management or configuration of services.
 . . . Too complicated? Then use the grommunio Appliance.
 
 
-0.1. Scale out considerations
-=============================
+Scale out considerations
+========================
 
 To deploy grommunio over multiple hosts/containers/etc., each host needs to be
 populated with a base operating system and the grommunio packages (all, or a
@@ -40,8 +42,8 @@ be replicated that often. However you split it is a determination YOU must
 make.
 
 
-0.2. Components
-===============
+Components
+==========
 
 Services that can be placed on different nodes:
 
@@ -154,8 +156,8 @@ Services that can be placed on different nodes:
   * Prosody application server with XMPP on port 5280.
 
 
-1. Establish networking
-=======================
+Establish networking
+====================
 
 .. image:: network1.png
 
@@ -178,8 +180,8 @@ save perhaps for a way to let yourself in. More details will be presented
 throughout the sections going forward.
 
 
-2. Declare hostname identity
-============================
+Declare hostname identity
+=========================
 
 .. image:: hostname1.png
 
@@ -194,8 +196,8 @@ Arbitrary names can be chosen so long as they make sense for their intended
 network.
 
 
-3. Package manager setup
-========================
+Package manager setup
+=====================
 
 Visit `<https://download.grommunio.com>`_ to get an idea of the list of platforms for
 which pre-built packages have been made available. Even though different
@@ -203,7 +205,7 @@ operating systems may use the same archive format (RPM, DEB, etc.) or
 repository metadata formats (rpm-md, apt), do not use a repository which does
 not exactly match your system. Do not use Debian packages for an Ubuntu system
 or vice-versa. Do not use openSUSE packages for a Fedora system or vice-versa.
-Do not even remotely think of converting between formats. 
+Do not even remotely think of converting between formats.
 
 zypp
 ----
@@ -276,8 +278,46 @@ For Ubuntu installations, the ``universe`` repository is required in addition
 to the base install.
 
 
-4. nginx
-========
+TLS certificates
+================
+
+For obtaining a certificate, refer to external documentation.
+
+* Self-signed certificate: https://stackoverflow.com/a/10176685
+* Using Let's Encrypt: https://certbot.eff.org/instructions
+
+The certificate's key strictly needs to be passwordless, as most services have
+no way to interactively ask for a password (they are launched in the background
+anyway).
+
+A certificate with a *subjectAltName* (SAN) field, or even a wildcard
+certificate may be desirable for the domain, if you plan on using multiple
+subdomains, e.g. ``meet.route27.test`` for *grommunio-meet*.
+
+Autodiscover clients, as part of their setup attempts, try to resolve and use
+``autodiscover.route27.test``. Having a SAN for this subdomain is however not
+strictly necessary; we can report that Autodiscover also works without this
+domain. See `MS-OXDISCO §3.1.5
+<https://docs.microsoft.com/en-us/openspecs/exchange_server_protocols/ms-oxdisco/d56ae3c6-bf29-4712-b274-2e4cc5fdaa64>`_
+about all the ways.
+
+Advance list about which entities will prospectively need access to the
+certificate(s):
+
+* gromox
+
+* nginx
+
+* postfix (optional)
+
+Some of the processes may read TLS certificates and their keyfiles *after*
+switching to an unprivileged user identity. As a result, these files may need
+to be enhanced with a filesystem ACL or, failing that, duplicate copies be made
+with suitable ownership.
+
+
+nginx
+=====
 
 nginx is used as a frontend to handle all HTTP requests, and to forward them to
 further individual services. For example, RPC/HTTP requests will be delegated
@@ -286,7 +326,7 @@ will be delegated to an uwsgi instance for further processing, and Mattermost
 requests to the chat API.
 
 An alternative HTTP server may be used if you feel comfortable in configuring
-all of it, however this guide will only focus on nginx. Now then, source the
+*all* of it, however this guide will only focus on nginx. Now then, source the
 nginx package from your operating system, and have the service started both on
 next boot and immediately.
 
@@ -303,38 +343,62 @@ Being the main entrypoint for everything, the nginx HTTPS network service,
 generally port 443, will need to be configured in the packet filter to be
 accessible (publicly).
 
-We have a support package that contains premade configuration fragments
-for nginx. Do install ``grommunio-common`` to have these to the filesystem. The
-initial fragment loading still needs to be explicitly done.
+
+nginx support package
+=====================
+
+We have a package that contains the first set of premade configuration
+fragments for nginx. Do install the ``grommunio-common`` package.
+
+.. code-block:: sh
+
+	zypper in grommunio-common
+
+The nginx default configuration as shipped by Linux distributions (file
+``/etc/nginx/nginx.conf``) contains a line ``include conf.d/*``. The support
+package places a file to ``/etc/nginx/conf.d/grommunio.conf``, such that the
+nginx-related grommunio configuration gets automatically loaded on the next
+nginx (re-)start.
+
+The actual fragment files for nginx are located under
+``/usr/share/grommunio-common`` for packaging policy reasons; they are not
+meant to be modified. They do however has further ``include`` directives
+pointing back to ``/etc`` to facilitate overriding specific aspects.
+
+``/usr/share/grommunio-common/nginx/locations.d/autodiscover.conf`` for example
+contains the fragment that tells nginx to recognize the ``/Autodiscover`` space
+and forward such requests to gromox-http on port 10443 (see later section).
 
 
-5. TLS certificates
-===================
+TLS for nginx
+=============
 
-Advance list about which entities will prospectively need access to the
-certificate(s):
+Create ``/etc/grommunio-common/nginx/ssl_certificate.conf`` and populate with
+the certificate directives, exchanging paths as appropriate:
 
-* nginx
+.. code-block::
 
-* postfix, if TLS is desired
+	ssl_certificate zzz.pem;
+	ssl_certificate_key zzz.key;
 
-* gromox, operating as the ``gromox`` system account (this account is created as part
-  of the installation of the ``gromox`` package)
+(The exact chain of includes is ``/etc/nginx/nginx.conf`` ►
+``/etc/nginx/conf.d/grommunio.conf`` ►
+``/usr/share/grommunio-common/nginx.conf`` ►
+``/etc/grommunio-common/nginx/ssl_certificate.conf``.)
 
-Self-signed certificate
------------------------
+The port 80 and 443 listen declarations are provided by
+``/usr/share/grommunio-common/nginx.conf``.
 
-https://stackoverflow.com/a/10176685
+nginx's configuration can be tested and shown, respectively:
+
+.. code-block:: sh
+
+	nginx -t
+	nginx -T
 
 
-Using Let's Encrypt
--------------------
-
-https://certbot.eff.org/instructions
-
-
-6. MariaDB
-==========
+MariaDB
+=======
 
 MariaDB/MySQL is used to store the user database amongst a few auxiliary
 configuration parameters. If you plan on erecting a multi-host Gromox cluster,
@@ -368,17 +432,17 @@ Within your private network, it may need to be opened if (and only if) you plan
 on using it in a multi-host Grommunio setup, or when your plans about database
 replication demand it.
 
-In certain versions, such as MySQL 8 on Ubuntu 20.04, the GRANT statement no
-longer implicitly creates users. At this point, one will need
+In certain versions, such as MySQL 8 (on e.g. Ubuntu 20.04), the GRANT
+statement no longer implicitly creates users and one must use `CREATE USER
+<https://dev.mysql.com/doc/refman/8.0/en/create-user.html>`_ instead.
+Furthermore, authentication with MariaDB/older MySQL clients may fail due to
+what appears to be a hashing method change; the remedy is an extra parameter
+for CREATE USER or `ALTER USER
+<https://stackoverflow.com/questions/49194719/>`_.
 
-.. code-block:: sql
 
-	CREATE USER 'grommunio'@'localhost' IDENTIFIED BY 'freddledgruntbuggly';
-	GRANT ALL ON `grommunio`.* TO 'grommunio'@'localhost';
-
-
-7. Gromox
-=========
+Gromox in general
+=================
 
 Gromox is the central groupware server component of grommunio. It provides
 the services for Outlook RPC, IMAP/POP3, an LDA for ingestion, and a PHP
@@ -392,6 +456,27 @@ source and who have general knowledge on how to do so are referred to the
 the build procedure.
 
 .. image:: gromox-1.png
+
+Gromox runs a number of processes and network services. None of them are meant
+to be open to the public Internet, because nginx is already that important
+point of ingress. The Gromox exmdb service (port 5000/tcp by default) needs to
+be reachable from other Gromox nodes in a multi-host grommunio setup for
+reasons of internal forwarding to a mailbox's home server.
+
+Daemon executables are located in ``/usr/libexec/gromox``, they have short
+names like ``http``, ``zcore``, etc. The manpage carries the same name, so you
+would use ``man http`` to call up the corresponding manpage. The configuration
+files read by default follow the same scheme, e.g. ``/etc/gromox/http.cfg``.
+Process infomration utilities such as ps(1) may show the full path of the
+executable or just ``http``, depending on how these diagnostic utilities are
+used. The systemd unit name, though, is ``gromox-http.service``.
+
+All log output goes to stderr. When run from systemd, this is automatically
+redirected to the journal.
+
+
+Gromox user database
+====================
 
 The connection parameters for MariaDB need to be conveyed to Gromox with the
 file ``/etc/gromox/mysql_adaptor.cfg``, whose contents could look like this::
@@ -416,88 +501,249 @@ initial creation of the database tables by issuing the command:
 
 	gromox-dbop -C
 
-Manual updates can be performed later with
+.. image:: gromox-2.png
+
+If automatic schema upgrades are disabled, manual updates can be performed
+later with:
 
 .. code-block:: sh
 
 	gromox-dbop -U
 
-.. image:: gromox-2.png
 
-Gromox runs a number of processes and network services. None of them are meant
-to be open to the public Internet, because nginx is already that important
-point of ingress. The Gromox exmdb service (port 5000/tcp by default) needs to
-be reachable from other Gromox nodes in a multi-host grommunio setup for
-reasons of internal forwarding to a mailbox's home server.
+gromox-event/timer
+==================
 
-The first services which need no further configuration can be enabled:
+* event: A notification daemon for an interprocess channel between
+gromox-imap/gromox-midb. No configuration needed.
+* timer: An at(1)/atd(8)-like daemon for delayed delivery. No configuration
+needed.
 
 .. code-block:: sh
 
 	systemctl enable --now gromox-event gromox-timer
 
-Now edit ``/etc/gromox/http.cfg``, where a few modifications will need to be
-made, such as specifying the locations of the TLS certificate files.
-Furthermore, because we have set up nginx earlier as a frontend to listen on
-ports 80 and 443, gromox-http needs to be moved "out the way" (its built-in
-defaults are also 80/443). A manual page is provided with all the configuration
-directives and can be called up with ``man 8gx http``.
+
+gromox-http
+===========
+
+Because nginx was set up earlier as a frontend to listen on ports 80 and 443,
+gromox-http needs to be moved "out of the way" (its built-in defaults are also
+80/443). In addition, the daemon needs to be told the paths to the TLS
+certificates. A manual page is provided with all the configuration directives
+and can be called up with ``man 8gx http``. For now, these directives should
+suffice:
 
 .. code-block::
 
 	listen_port=10080
 	listen_ssl_port=10443
 	http_support_ssl=yes
-	http_certificate_path=certificate.pem
-	http_private_key_path=certificate.key
+	http_certificate_path=zzz.pem
+	http_private_key_path=zzz.key
 
-With this, ``gromox-http`` can be launched.
+Run the service.
 
 .. code-block:: sh
 
 	systemctl enable --now gromox-http
 
+Perform a connection test. The expected result of requesting the ``/`` URI will
+be a 404 status code. (It could serve a static HTML file, but the default
+config has no such file, and ``/`` is not mapped anywhere. Mayb we should
+change that…)
 
-8. PHP-FPM
-==========
+.. code-block:: sh
 
-
-8. Postfix
-==========
-
-Install it.
-
-
-9. Administration interface
-===========================
-
-Install ``grommunio-admin-api``
+	curl -kv https://localhost:10443/
 
 .. code-block::
 
-	zypper in grommunio-admin-api grommunio-admin-web
+	> GET / HTTP/1.1
+	> Host: localhost:10443
+	…
+	< HTTP/1.1 404 Not Found
+	…
+
+Gromox's default config does however has a mapping for ``/web`` (to
+``/usr/share/grommunio-web``). If you happen have the ``grommunio-web`` package
+already installed, requests to this subdirectory can be responded to. You can
+test the following URLs (port 10443 for gromox-http directly, 443 for nginx,
+respectively) that should service a static file:
+
+.. code-block:: sh
+
+	curl -kv https://localhost:10443/web/robots.txt
+	curl -kv https://localhost:443/web/robots.txt
+
+.. code-block::
+
+	< HTTP/1.1 200 OK
+	< Date: Tue, 29 Mar 2022 23:08:33 GMT
+	< Content-Type: text/plain
+	< Content-Length: 26
+	< Accept-Ranges: bytes
+	< Last-Modified: Tue, 29 Mar 2022 07:09:12 GMT
+	< ETag: "19165e1100000000-1a000000-98b0426200000000"
+	<
+	User-agent: *
+	Disallow: /
+
+
+gromox-midb/zcore
+=================
+
+The IMAP Message Index Database, and the bridge process for PHP-MAPI. No
+further configuration needed.
+
+.. code-block:: sh
+
+	systemctl enable --now gromox-midb gromox-zcore
+
+
+gromox-imap/pop3
+================
+
+Similar to ``http.cfg``, convey to the IMAP/POP3 daemons the TLS certificate
+paths. Skip this section if you do not intend to run these protocols.
+
+IMAP/POP3 can run in unencrypted mode, but only for developers. Hence,
+imap_force_starttls is set here. In ``/etc/gromox/imap.cfg``, declare:
+
+.. code-block::
+
+	listen_ssl_port=993
+	imap_support_starttls=true
+	imap_certificate_path=zzz.pem
+	imap_private_key_path=zzz.key
+	imap_force_starttls=true
+
+In ``/etc/gromox/pop3.cfg``:
+
+.. code-block::
+
+	listen_ssl_port=995
+	pop3_support_stls=true
+	pop3_certificate_path=zzz.pem
+	pop3_private_key_path=zzz.key
+	pop3_force_stls=true
+
+Enable/start zero or more of the services you wish to utilize:
+
+.. code-block:: sh
+
+	systemctl enable --now gromox-imap gromox-pop3
+
+
+PHP-FPM
+=======
+
+The installation of the ``gromox`` package should have already pulled in
+php-fpm as a dependency.
+
+For completeness, verify that PHP knows about the MAPI module.
+
+.. code-block:: sh
+
+	echo -en '<?php phpinfo(); ?>' | php | grep mapi
+
+Verify that the gromox pool file was placed.
+
+.. code-block:: sh
+
+	ls -al /etc/php8/fpm/php-fpm.d/gromox.conf
+
+Then enable/start php-fpm:
+
+.. code-block:: sh
+
+	systemctl enable --now php-fpm
+
+For completness, verify that the socket in the pool file was created:
+
+.. code-block:: sh
+
+	ls -al /run/gromox/php-fpm.sock
+
+Try to elicit a response from the Autodiscover code, via gromox-http (10443)
+and/or nginx (443).
+(``/usr/share/grommunio-common/nginx/locations.d/autodiscover.conf`` defines
+the handler for the ``/Autodiscover`` URI path, to pass all requests to
+gromox-http on port 10443. gromox-http forwards this to php-fpm. This way,
+Autodiscover also works in test setups without a frontend like nginx.)
+
+.. code-block:: sh
+
+	curl -kv https://localhost:10443/Autodiscover/Autodiscover.xml
+	curl -kv https://localhost:443/Autodiscover/Autodiscover.xml
+
+Expected result of this operation:
+
+.. code-block::
+
+	> GET /Autodiscover/Autodiscover.xml HTTP/1.1
+	> Host: localhost:10443
+	…
+	< HTTP/1.1 200 Success
+	< Date: Tue, 29 Mar 2022 23:54:16 GMT
+	< Transfer-Encoding: chunked
+	< Content-type: text/html; charset=UTF-8
+	<
+	E-2000: invalid request method, must be POST!
+
+
+Administration API (AAPI)
+=========================
+
+Install ``grommunio-admin-api``.
+
+.. code-block::
+
+	zypper in grommunio-admin-api
 
 Fragments are placed in /usr/share/grommunio-common/...
 In the nginx configuration, include this fragment ...
 
 
-10. Create first user
-====================
+Permissions
+-----------
 
-...
-
-
-11. Outlook connection
-=====================
-
-...
+AAPI writes to system configuration files. As far as Gromox is concerned,
+``/etc/gromox`` should have owner ``root:gromox`` and mode 0771 or 0775. The
+filelist is known in advance, so there is little gain in removing the ``o+r``
+bit.
 
 
-10. grommunio-web frontend
-==========================
+Administration Web Interface (AWEB)
+===================================
 
-.. code-block::
 
-	zypper in grommunio-web
+* Create user
+* Authentication, Autodiscover test
+* Outlook connection test
 
-(hook up to nginx / gromox pool / ...)
+
+grommunio-web
+=============
+
+Install ``grommunio-web``. Verify that you can load the login page. This is
+reachable by both gromox-http (10443) and nginx (443):
+
+.. code-block:: sh
+
+	curl -kv https://localhost:443/web/
+
+
+Loopback mail
+=============
+
+
+Postfix
+=======
+
+
+Gromox multiserver
+==================
+
+On each node, ``/etc/gromox/exmdb_acl.txt`` needs to be placed and contain a
+list of IP addresses of all the mailbox nodes.
