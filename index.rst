@@ -58,7 +58,12 @@ good.
 You are well advised to install and configure a packet filter, a.k.a. a
 firewall, with the sensible default of disallowing every service by default,
 save perhaps for a way to let yourself in. More details will be presented
-throughout the sections going forward.
+throughout the sections going forward. The summary though:
+
+* open VPN, SSH and/or port 8443 (AWEB) for the admin as desired
+* open smtp/25 for server-to-server mail passing as needed
+* open https/443 for end-user interactions
+* open imaps, pop3s for end-user interactions if desired
 
 
 Declare hostname identity
