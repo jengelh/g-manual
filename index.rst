@@ -842,13 +842,13 @@ plugin, so do install that alongside Postfix itself:
 
 	zypper in postfix postfix-mysql
 
-Edit Postfix's ``/etc/postfix/main.cf`` and append:
+Set up a few Postfix directives:
 
-.. code-block::
+.. code-block:: sh
 
-	virtual_alias_maps = mysql:/etc/postfix/g-alias.cf
-	virtual_mailbox_domains = mysql:/etc/postfix/g-virt.cf
-	virtual_transport = smtp:[::1]:24
+	postconf -e virtual_alias_maps=mysql:/etc/postfix/g-alias.cf
+	postconf -e virtual_mailbox_domains=mysql:/etc/postfix/g-virt.cf
+	postconf -e virtual_transport="smtp:[localhost]:24"
 
 Filenames for these additional configuration fragments, ``g-alias.cf``,
 ``g-virt.cf``, can be freely chosen. Add the MariaDB connection parameters to
