@@ -40,7 +40,42 @@ reason.
 Establish networking
 ====================
 
-.. image:: network1.png
+[Text screenshot of networkctl output shown in a command shell]
+
+.. code-block::
+
+	localhost:~ # networkctl
+	IDX LINK  TYPE     OPERATIONAL SETUP
+	  1 lo    loopback carrier     unmanaged
+	  2 host0 ether    routable    configured
+
+	2 links listed.
+
+	localhost:~ # networkctl status host0
+	● 2: host0
+			     Link File: n/a
+			  Network File: /etc/systemd/network/host0.network
+				  Type: ether
+				 State: routable (configured)
+			  Online state: online
+			    HW Address: aa:b2:5f:b1:9d:46
+				   MTU: 1500 (min: 68, max: 65535)
+				 QDisc: noqueue
+	  IPv6 Address Generation Mode: none
+		  Queue Length (Tx/Rx): 32/32
+		      Auto negotiation: no
+				 Speed: 10Gbps
+				Duplex: full
+				  Port: tp
+			       Address: 88.198.85.196
+					2a01:4f8:10b:45d8::f27
+			       Gateway: 195.201.56.39
+					2a01:4f8:10b:45d8::1
+		     Activation Policy: up
+		   Required For Online: yes
+
+	Mar 31 23:47:13 localhost systemd-networkd[22]: host0: Link UP
+	Mar 31 23:47:13 localhost systemd-networkd[22]: host0: Gained carrier
 
 For this particular container, I had enabled ``systemd-networkd`` and put the
 network configuration in place apriori. If anything, this section is but a
@@ -50,7 +85,23 @@ varies wildly between operating systems, and not every system is using
 systemd-networkd. Consult the documentation relevant for your environment to
 get online.
 
-.. image:: network2.png
+[Text screenshot of iproute2 output in a command shell]
+
+.. code-block::
+
+	mail:~ # ip a
+	1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+	    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+	    inet 127.0.0.1/8 scope host lo
+	       valid_lft forever preferred_lft forever
+	    inet6 ::1/128 scope host
+	       valid_lft forever preferred_lft forever
+	2: host0@if17: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000
+	    link/ether aa:b2:5f:b1:9d:46 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+	    inet 88.198.85.196/32 scope global host0
+	       valid_lft forever preferred_lft forever
+	    inet6 2a01:4f8:10b:45d8::f27/128 scope global
+	       valid_lft forever preferred_lft forever
 
 IPv6 is mandatory on the host itself. If you have ``::1`` assigned, all is
 good.
