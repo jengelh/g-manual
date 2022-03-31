@@ -803,13 +803,79 @@ Install ``grommunio-web``. Verify that you can load the login page and login:
 Loopback mail
 =============
 
+The *gromox-delivery-queue* and *gromox-delivery* services comprise the Local
+Delivery Agent. This LDA supports a bit of SMTP to facilitate it being used in
+a filter-free loopback scenario. That is, one can send mail from route38.test
+to route38.test (only), with no SMTP to the outside.
+
+(A mail composed and submitted with grommunio-web will ultimately be emitted by
+the *gromox-zcore* process, which sends it to *localhost:25*. Alternatively, when
+using Outlook, the *gromox-http* process emits the mail to *localhost:25*. And
+on port 25, one can either run the LDA, or indeed a full MTA like Postfix.)
+
+On some systems which exuberantly start services (hi Debian), you may need to
+disable an existing MTA first before being able to perform this test.
+(Alternatively, you can skip right the "Postfix" section below.)
+
+.. code-block:: sh
+
+	systemctl stop postfix
+	systemctl enable --now grommunio-delivery grommunio-delivery-queue
+
 
 Postfix
 =======
 
+Because *gromox-delivery-queue* listens on port 25 by default, it needs to be
+moved out the way when putting a full MTA in its place. Edit
+``/etc/gromox/smtp.cfg`` and declare:
 
-Gromox multiserver
-==================
+.. code-block::
 
-On each node, ``/etc/gromox/exmdb_acl.txt`` needs to be placed and contain a
-list of IP addresses of all the mailbox nodes.
+	listen_port = 24
+
+Within the Postfix configuration, we will be making use of the *mysql* lookup
+plugin, so do install that alongside Postfix itself:
+
+.. code-block:: sh
+
+	zypper in postfix postfix-mysql
+
+Edit Postfix's ``/etc/postfix/main.cf`` and append:
+
+.. code-block::
+
+	virtual_alias_maps = mysql:/etc/postfix/g-alias.cf
+	virtual_mailbox_domains = mysql:/etc/postfix/g-virt.cfg
+	virtual_transport = smtp:[::1]:24
+
+For some reason, the use of ``smtp:localhost:24`` is not functional (attempted
+MX resolution?). Anyway, the filenames can be freely chosen, they only serve as
+example. Add the MariaDB connection parameters to the alias resolution fragment
+that (here) goes into ``/etc/postfix/g-alias.cf``:
+
+.. code-block::
+
+	user = grommunio
+	password = freddledgruntbuggly
+	hosts = localhost
+	dbname = grommunio
+	query = SELECT mainname FROM aliases WHERE aliasname='%s'
+
+Furthermore, add the MariaDB parameters to the domain resolution fragment, here
+in ``/etc/postfix/g-virt.cf``:
+
+.. code-block::
+
+	user = grommunio
+	password = freddledgruntbuggly
+	hosts = localhost
+	dbname = grommunio
+	query = SELECT 1 FROM domains WHERE domain_status=0 AND domainname='%s'
+
+Finally, enable/restart the services so they can take their new places:
+
+.. code-block:: sh
+
+	systemctl enable --now grommunio-delivery grommunio-delivery-queue postfix
+	systemctl restart grommunio-delivery-queue postfix
