@@ -393,8 +393,8 @@ Because nginx was set up earlier as a frontend to listen on ports 80 and 443,
 gromox-http needs to be moved "out of the way" (its built-in defaults are also
 80/443). In addition, the daemon needs to be told the paths to the TLS
 certificates. A manual page is provided with all the configuration directives
-and can be called up with ``man 8gx http``. For now, these directives should
-suffice:
+and can be called up with ``man 8gx http``. For now, these directives for
+``/etc/gromox/http.cfg`` should suffice:
 
 .. code-block::
 
