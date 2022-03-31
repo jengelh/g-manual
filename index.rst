@@ -846,13 +846,13 @@ Edit Postfix's ``/etc/postfix/main.cf`` and append:
 .. code-block::
 
 	virtual_alias_maps = mysql:/etc/postfix/g-alias.cf
-	virtual_mailbox_domains = mysql:/etc/postfix/g-virt.cfg
+	virtual_mailbox_domains = mysql:/etc/postfix/g-virt.cf
 	virtual_transport = smtp:[::1]:24
 
-For some reason, the use of ``smtp:localhost:24`` is not functional (attempted
-MX resolution?). Anyway, the filenames can be freely chosen, they only serve as
-example. Add the MariaDB connection parameters to the alias resolution fragment
-that (here) goes into ``/etc/postfix/g-alias.cf``:
+Filenames for these additional configuration fragments, ``g-alias.cf``,
+``g-virt.cf``, can be freely chosen. Add the MariaDB connection parameters to
+the alias resolution fragment that (here) goes into
+``/etc/postfix/g-alias.cf``:
 
 .. code-block::
 
