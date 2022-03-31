@@ -1,21 +1,40 @@
 .. sectnum::
 
-Introduction
-============
+*Grommunio from Scratch* – Introduction
+=======================================
 
-This document shall show, in a 27-step process, how to install Grommunio
-components manually. It is targeted at adept administrators. Pictured above and
-subsequently is the typical boot phase of many a contemporary Linux systems.
+This document shall show, in a lengthy multi-step process how to install
+Grommunio components manually, from scratch, with help only from published
+packages.
 
-Pictures in this document depict a (what is initially) a fairly minimalist
-openSUSE Tumbleweed container as a base. However, the choice of system used for
-the screenshots shall be of no concern. The reader ought to be familiar with
+No appliance (ISO image with installer) is used, no guided menus are
+available — it is just you, a command-line and this howto.
+
+This document is targeted at adept administrators who are fully familiar with
 any peculiarities that their particular environment has bestowed upon them, be
-it in boot, in package management or configuration of services.
+it in boot, in package management, or service configuration.
+
+[[ Console screenshots are under review and in the process of being replaced by
+text for accessibility reasons ]]
+
+This howto assumes a basic system is running already. *Basic* in this regard
+means:
+
+* a system service manager of some kind should be running (systemd, sysvinit,
+  etc.)
+* the system should be in its typical multi-user state (in terms of systemd,
+  *multi-user.target* should have at least been started; in terms of sysvinit,
+  init level 3 or 5)
+* should have an interactive shell for you to use
+* should not be ephemeral and not lose its state when turned off
+
+Just like this image which happens to depict an openSUSE Tumbleweed LXC-class
+container that we started with *systemd-nspawn*.
 
 .. image:: login1.png
 
-. . . Too complicated? Then use the grommunio Appliance.
+. . . Too complicated? Then use the grommunio Appliance. It exists for a
+reason.
 
 
 Establish networking
