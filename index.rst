@@ -596,7 +596,7 @@ Expected output for IMAP:
 
 	*   Trying ::1:993...
 	…
-	< * OK mail.route38.test service ready
+	< * OK mail.route27.test service ready
 	> A001 CAPABILITY
 	< * CAPABILITY IMAP4rev1 XLIST SPECIAL-USE UNSELECT UIDPLUS IDLE AUTH=LOGIN STARTTLS
 	< A001 OK CAPABILITY completed
@@ -610,7 +610,7 @@ Expected output for POP3:
 	* TCP_NODELAY set
 	* Connected to localhost (::1) port 995 (#0)
 	…
-	< +OK mail.route38.test pop service ready
+	< +OK mail.route27.test pop service ready
 	> CAPA
 	< +OK capability list follows
 	< STLS
@@ -817,13 +817,13 @@ required`` will appear.
 Create domain & user
 --------------------
 
-Create the ``route38.test`` domain, and a user using AWEB. Afterwards, one can
+Create the ``route27.test`` domain, and a user using AWEB. Afterwards, one can
 test the login/use in various ways. For example, to run the Autodiscover
 procedure from the command-line:
 
 .. code-block:: sh
 
-	PASS=abcdef /usr/libexec/gromox/autodiscover -e boop@route38.test
+	PASS=abcdef /usr/libexec/gromox/autodiscover -e boop@route27.test
 
 Expected output:
 
@@ -837,12 +837,12 @@ At your leisure, connect with Outlook.
 
 To be able to log into IMAP/POP3, the user must have this feature explicitly
 enabled. This can be changed using AWEB by going to the *Domains* ►
-*route38.test* ► *Users* tab on the left-hand side navigation pane. Once
+*route27.test* ► *Users* tab on the left-hand side navigation pane. Once
 enabled,
 
 .. code-block:: sh
 
-	curl -kv imaps://localhost/ -u boop@route38.test:abcdef
+	curl -kv imaps://localhost/ -u boop@route27.test:abcdef
 
 Expected output:
 
@@ -873,7 +873,7 @@ Install ``grommunio-web``. Verify that you can load the login page and login:
 .. code-block:: sh
 
 	curl -kv https://localhost:443/web/
-	# firefox https://mail.route38.test/web/
+	# firefox https://mail.route27.test/web/
 
 
 Loopback mail
@@ -881,8 +881,8 @@ Loopback mail
 
 The *gromox-delivery-queue* and *gromox-delivery* services comprise the Local
 Delivery Agent. This LDA supports a bit of SMTP to facilitate it being used in
-a filter-free loopback scenario. That is, one can send mail from route38.test
-to route38.test (only), with no SMTP to the outside.
+a filter-free loopback scenario. That is, one can send mail from route27.test
+to route27.test (only), with no SMTP to the outside.
 
 (A mail composed and submitted with grommunio-web will ultimately be emitted by
 the *gromox-zcore* process, which sends it to *localhost:25*. Alternatively, when
