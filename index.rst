@@ -92,15 +92,20 @@ Services that can be placed on different nodes:
 
     * connects to gromox-zcore for state and mailbox access
 
-* Frontend HTTP server (possibly as load balancers), e.g. nginx on port 443
+* Frontend HTTP server (possibly as a fedration of load balancers later down
+  the road), e.g. nginx, on port 443
 
   * Proxies to 9001 for URIs belonging to grommunio-web
 
   * Proxies to 10443 for URIs belonging to OXDISCO, MAPI, RPC
 
-  * Proxies to an uwsgi for URIs belonging to admin-api
-
   * Serves up flat files (e.g. for grommunio-web/chat/meet/admin-web)
+
+  * Also listens on 8080/8443 and serves the Administrator interface there
+    (more flat files).
+
+  * Proxies to an AF_LOCAL socket for URIs belonging to the AAPI REST
+    interface.
 
 * gromox-midb
 
@@ -143,6 +148,8 @@ Services that can be placed on different nodes:
 
   * Connects to gromox-delivery for mail ingesting.
 
+  * [[ rspamd may run on port 11334 ]]
+
 * grommunio-chat
 
   * Connects to MariaDB and optionally LDAP for authentication.
@@ -154,6 +161,8 @@ Services that can be placed on different nodes:
   * Connects to MariaDB and optionally LDAP for authentication.
 
   * Prosody application server with XMPP on port 5280.
+
+* Administration interface; REST interface and HTML/JS frontend
 
 
 Establish networking
@@ -339,9 +348,9 @@ which AAPI can *optionally* for reporting traffic statistics. VTS is
 **not** available for all platforms, in which case you have to omit and make do
 without it.
 
-Being the main entrypoint for everything, the nginx HTTPS network service,
-generally port 443, will need to be configured in the packet filter to be
-accessible (publicly).
+Being the main entrypoint for everything, the nginx HTTPS network service will
+need to be configured in the packet filter to be accessible (publicly). In
+other words, open port 443.
 
 
 nginx support package
@@ -550,12 +559,14 @@ Run the service.
 
 Perform a connection test. The expected result of requesting the ``/`` URI will
 be a 404 status code. (It could serve a static HTML file, but the default
-config has no such file, and ``/`` is not mapped anywhere. Mayb we should
+config has no such file, and ``/`` is not mapped anywhere. Maybe we should
 change that…)
 
 .. code-block:: sh
 
 	curl -kv https://localhost:10443/
+
+Expected output:
 
 .. code-block::
 
@@ -569,12 +580,19 @@ Gromox's default config does however has a mapping for ``/web`` (to
 ``/usr/share/grommunio-web``). If you happen have the ``grommunio-web`` package
 already installed, requests to this subdirectory can be responded to. You can
 test the following URLs (port 10443 for gromox-http directly, 443 for nginx,
-respectively) that should service a static file:
+respectively) with curl from the server command-line, and it should serve a
+static file:
 
 .. code-block:: sh
 
 	curl -kv https://localhost:10443/web/robots.txt
 	curl -kv https://localhost:443/web/robots.txt
+	# firefox https://mail.route27.test/web/robots.txt
+
+Using a browser from a separate desktop machine is also possible provided port
+10443 was made accessible. (Normally, 10443 need not be exposed to any other
+hosts.) The result for localhost:10443 and localhost:443 should be the same.
+Expected output:
 
 .. code-block::
 
@@ -590,8 +608,8 @@ respectively) that should service a static file:
 	Disallow: /
 
 
-gromox-midb/zcore
-=================
+gromox-midb & zcore
+===================
 
 The IMAP Message Index Database, and the bridge process for PHP-MAPI. No
 further configuration needed.
@@ -601,8 +619,8 @@ further configuration needed.
 	systemctl enable --now gromox-midb gromox-zcore
 
 
-gromox-imap/pop3
-================
+gromox-imap & pop3
+==================
 
 Similar to ``http.cfg``, convey to the IMAP/POP3 daemons the TLS certificate
 paths. Skip this section if you do not intend to run these protocols.
@@ -628,11 +646,54 @@ In ``/etc/gromox/pop3.cfg``:
 	pop3_private_key_path=zzz.key
 	pop3_force_stls=true
 
-Enable/start zero or more of the services you wish to utilize:
+Enable/start zero or more of the services you wish to utilize. Adjust
+your packet filter configuration for these new ports as needed.
 
 .. code-block:: sh
 
 	systemctl enable --now gromox-imap gromox-pop3
+
+Trivial testing can be performed with a utility like *telnet*, *socat*; but
+*curl* is quite sophisticated in its own right and can issue IMAP/POP3 protocol
+commands.
+
+.. code-block:: sh
+
+	curl -kv imaps://localhost/
+	curl -kv pop3s://localhost/
+
+Expected output for IMAP:
+
+.. code-block::
+
+	*   Trying ::1:993...
+	…
+	< * OK mail.route38.test service ready
+	> A001 CAPABILITY
+	< * CAPABILITY IMAP4rev1 XLIST SPECIAL-USE UNSELECT UIDPLUS IDLE AUTH=LOGIN STARTTLS
+	< A001 OK CAPABILITY completed
+	…
+
+Expected output for POP3:
+
+.. code-block::
+
+	*   Trying ::1:995...
+	* TCP_NODELAY set
+	* Connected to localhost (::1) port 995 (#0)
+	…
+	< +OK mail.route38.test pop service ready
+	> CAPA
+	< +OK capability list follows
+	< STLS
+	< TOP
+	< USER
+	< PIPELINING
+	< UIDL
+	< TOP
+	< .
+	> LIST
+	< -ERR login first
 
 
 PHP-FPM
@@ -676,6 +737,7 @@ Autodiscover also works in test setups without a frontend like nginx.)
 
 	curl -kv https://localhost:10443/Autodiscover/Autodiscover.xml
 	curl -kv https://localhost:443/Autodiscover/Autodiscover.xml
+	# firefox https://mail.route27.test/Autodiscover/Autodiscover.xml
 
 Expected result of this operation:
 
@@ -695,43 +757,194 @@ Expected result of this operation:
 Administration API (AAPI)
 =========================
 
-Install ``grommunio-admin-api``.
+Install the ``grommunio-admin-api`` package. This package contains a
+command-line interface, and an application server implemented using uwsgi.
 
-.. code-block::
+.. code-block:: sh
 
 	zypper in grommunio-admin-api
 
-Fragments are placed in /usr/share/grommunio-common/...
-In the nginx configuration, include this fragment ...
+Edit ``/etc/grommunio-admin-api/conf.d/database.yaml`` to make AAPI aware of
+the MariaDB configuration:
+
+.. code-block:: yaml
+
+	DB:
+	  host: 'localhost'
+	  user: 'grommunio'
+	  pass: 'freddledgruntbuggly'
+	  database: 'grommunio'
+
+Set the password for the AAPI admin. This shell command can also be used later
+to recover from a lost password situation.
+
+.. code-block:: sh
+
+	grommunio-admin passwd
+
+The main user of the uwsgi server is the Administrator Web interface (AWEB), so
+do enable/start the service now.
+
+.. code-block:: sh
+
+	systemctl enable --now grommunio-admin-api
 
 
 Permissions
 -----------
 
-AAPI writes to system configuration files. As far as Gromox is concerned,
-``/etc/gromox`` should have owner ``root:gromox`` and mode 0771 or 0775. The
-filelist is known in advance, so there is little gain in removing the ``o+r``
-bit.
+AAPI can and will write to certain system configuration files, such as
+``/etc/gromox``. The AAPI uwsgi application server itself runs as the
+``grommunio/nginx`` (SUSE) / ``grommunio/www-data`` user identity.
+[[ Does it need permission on /etc/gromox? Seems not so.. ]]
+
+
+nginx support package for AAPI/AWEB
+===================================
+
+The installation of ``grommunio-admin-api`` or ``grommunio-admin-web`` also
+pulls in ``grommunio-admin-common``, which places a number of nginx fragments
+into the filesystem similar to the earlier ``grommunio-common``.
+
+The package adds nginx configuration fragments to make it listen on port 8080
+unencrypted. You can edit ``/etc/nginx/conf.d/grommunio-admin.conf`` and
+disable the inclusion of ``/usr/share/grommunio-admin-common/nginx.conf``
+and/or enable encrypted access by uncommenting
+``/usr/share/grommunio-admin-common/nginx-ssl.conf``. The latter will make
+nginx listen on port 8443.
+
+Create ``/etc/grommunio-admin-common/nginx-ssl.conf`` as a file, or as a
+symlink to ``/etc/grommunio-common/nginx/ssl_certificate.conf`` to the existing
+TLS directives.
+
+.. code-block:: sh
+
+	ln -s /etc/grommunio-common/nginx/ssl_certificate.conf /etc/grommunio-admin-common/nginx-ssl.conf
+
+Reload/restart nginx as needed. Adjust your packet filter configuration for the
+new ports as needed.
+
+The fragment files installed a route for the ``/api/v1`` URI space to be
+forwarded to the uwsgi process. It is now possible to make requests to the AAPI
+endpoints, and we can test for that with curl or even firefox.
+
+.. code-block:: sh
+
+	curl -kv https://localhost:8443/api/v1/login
+	# firefox https://mail.route27.test:8443/api/v1/login
+
+The expected result is a JSON response.
+
+.. code-block::
+
+	…
+	< HTTP/1.1 405 METHOD NOT ALLOWED
+	…
+	{"message":"Method 'GET' not allowed on this endpoint"}
+
+An authenticated request can also be made:
+
+.. code-block:: sh
+
+	curl -kv https://localhost:8443/api/v1/login -d 'user=admin&password=freddledgruntbuggly'
+
+Expected output:
+
+.. code-block::
+
+	{"grommunioAuthJwt":"eyJ0…"}
 
 
 Administration Web Interface (AWEB)
 ===================================
 
+AWEB is a package containing a HTML/JavaScript frontend and which will make use
+of AAPI's endpoints via REST.
 
-* Create user
-* Authentication, Autodiscover test
-* Outlook connection test
+.. code-block:: sh
+
+	zypper in grommunio-admin-web
+
+Since this package contains just static files, the login page is now ready.
+Visit ``https://mail.route27.test:8443/`` and log in with the credentials you
+have previously assigned (username: ``admin``, password: as you did).
+
+The details on how to use AWEB (sometimes also referred to as AUI) are provided
+on the `Grommunio documentation website
+<https://docs.grommunio.com/admin/administration.html#grommunio-admin-ui-aui>`_.
+
+
+Known issues
+------------
+
+The systemd service list in the dashboard (subsection “Performance”, box
+container in the left third) has action buttons to trigger systemctl
+``enable/disable/start/stop/restart``. Despite the placement of the file
+``/usr/share/polkit-1/rules.d/pkit-10-gromox.rules``, AAPI is unable to issue
+systemctl commands, and a red error box with text ``Interactive authentication
+required`` will appear.
+
+
+Create domain & user
+--------------------
+
+Create the ``route38.test`` domain, and a user using AWEB. Afterwards, one can
+test the login/use in various ways. For example, to run the Autodiscover
+procedure from the command-line:
+
+.. code-block:: sh
+
+	PASS=abcdef /usr/libexec/gromox/autodiscover -e boop@route38.test
+
+Expected output:
+
+.. code-block::
+
+	<?xml version="1.0" encoding="utf-8"?>
+	<Autodiscover xmlns="http://schemas.microsoft.com/exchange/autodiscover/responseschema/2006">
+	<Response xmlns=…
+
+At your leisure, connect with Outlook.
+
+To be able to log into IMAP/POP3, the user must have this feature explicitly
+enabled. This can be changed using AWEB by going to the *Domains* ►
+*route38.test* ► *Users* tab on the left-hand side navigation pane. Once
+enabled,
+
+.. code-block:: sh
+
+	curl -kv imaps://localhost/ -u boop@route38.test:abcdef
+
+Expected output:
+
+.. code-block::
+
+	…
+	> A001 CAPABILITY
+	< * CAPABILITY IMAP4rev1 XLIST SPECIAL-USE UNSELECT UIDPLUS IDLE AUTH=LOGIN STARTTLS
+	< A001 OK CAPABILITY completed
+	> A002 AUTHENTICATE LOGIN
+	< + VXNlciBOYW1lAA==
+	> Ym9ua0Byb3V0ZTM4LnRlc3Q=
+	< + UGFzc3dvcmQA
+	> YWJjZGVm
+	< A002 OK logged in
+	> A003 LIST "" *
+	< * LIST (\HasNoChildren) "/" {5}
+	* LIST (\HasNoChildren) "/" {5}
+	< INBOX
+	…
 
 
 grommunio-web
 =============
 
-Install ``grommunio-web``. Verify that you can load the login page. This is
-reachable by both gromox-http (10443) and nginx (443):
+Install ``grommunio-web``. Verify that you can load the login page and login:
 
 .. code-block:: sh
 
 	curl -kv https://localhost:443/web/
+	# firefox https://mail.route38.test/web/
 
 
 Loopback mail
