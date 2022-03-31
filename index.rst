@@ -36,6 +36,9 @@ container that we started with *systemd-nspawn*.
 . . . Too complicated? Then use the grommunio Appliance. It exists for a
 reason.
 
+*Applicability tag*: Document applies to gromox-1.18.81,
+aapi-1.6.13, 2022-03-31.
+
 
 Establish networking
 ====================
