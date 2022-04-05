@@ -899,7 +899,7 @@ disable an existing MTA first before being able to perform this test.
 .. code-block:: sh
 
 	systemctl stop postfix
-	systemctl enable --now grommunio-delivery grommunio-delivery-queue
+	systemctl enable --now gromox-delivery gromox-delivery-queue
 
 
 Postfix
@@ -956,5 +956,5 @@ Finally, enable/restart the services so they can take their new places:
 
 .. code-block:: sh
 
-	systemctl enable --now grommunio-delivery grommunio-delivery-queue postfix
-	systemctl restart grommunio-delivery-queue postfix
+	systemctl enable --now gromox-delivery gromox-delivery-queue postfix
+	systemctl restart gromox-delivery-queue postfix
