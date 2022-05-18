@@ -76,12 +76,12 @@ and so using "Check Name" will not function just yet.
 
 .. image:: profrpc.png
 
-Instead, go to "Advanced Settings" and its Security notebook page, and set "Anonymous
+Instead, go to "More Settings" and its Security notebook page, and set "Anonymous
 Authentication".
 
 .. image:: profproxy1.png
 
-Next, goto Advanced Setting's "Connection" notebook page, enter the server name
+Next, goto More Setting's "Connection" notebook page, enter the server name
 *again* in the HTTP field, and switch from "NTLM Authentication" to "Basic
 Authentication".
 
@@ -93,11 +93,13 @@ You should enable both "On fast networks, connect using HTTP first" and "On
 slow networks, connect using HTTP first".
 
 "Connect using HTTP first, then use TCP/IP" is a misnomer; what it really means
-"Connecting using RPCHTTP or MAPIHTTP first, then try RPC-over-TCP". Close all
-the subdialogs.
+"Connecting using RPCHTTP or MAPIHTTP first, then try RPC-over-TCP".
 
-If you now use the "Check Name" feature, the server field will change to the
-magic value ``SERVERS``.
+You can close the More Settings subdialog(s).
+
+If you now use the "Check Name" feature, the server and user name field values
+should “resolve”, i.e. become underlined. The server name will also change to
+an uncanny value of ``SERVERS``.
 
 
 RPC hostname shenanigans
@@ -177,6 +179,9 @@ The value for ``PR_TEST_LINE_SPEED`` is of no consequence. It is said
 to be a special property to make emsmdb.dll always trigger a network request.
 
 Changing ``SERVERS`` to the real host name makes mailbox access possible.
+
+(Later versions of the connector such as from OL2021 do not create
+the 0x662A001F property at all anymore.)
 
 
 Further reading
