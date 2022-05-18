@@ -3,3 +3,5 @@
   guided menus, just RPM/DEB packages)
 
 * `Multiserver <multiserver.rst>`_ configuration
+
+* `Outlook 2010/2013 profile setup <OL2013_Setup.rst>`_
