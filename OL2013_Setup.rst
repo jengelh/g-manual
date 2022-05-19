@@ -124,8 +124,8 @@ gore though…
 Some Windows installations are fine with ``SERVERS``. Some are not. We do not
 know exactly why, but one hypothesis is that some versions try to resolve the
 RPC server name ahead of the RPCHTTP proxy name. We *did* observe, with
-Wireshark, that NetBIOS name request packets (NBNS protocol) for ``SERVERS``
-are being emitted into the network.
+Wireshark, that name lookups were being done for ``SERVERS`` (NBNS, LLMNR
+and/or MDNS packets) are being emitted into the network.
 
 By modifying the server or user name field *again* (e.g. remove last character
 and add the character back again), the field values go back to unresolved mode
