@@ -88,11 +88,11 @@ varies wildly between operating systems, and not every system is using
 systemd-networkd. Consult the documentation relevant for your environment to
 get online.
 
-[Text screenshot of iproute2 output in a command shell]
+[Text screenshot of iproute2 output in a command shell follows:]
 
 .. code-block::
 
-	mail:~ # ip a
+	localhost:~ # ip a
 	1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
 	    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
 	    inet 127.0.0.1/8 scope host lo
