@@ -140,10 +140,11 @@ Package manager setup
 =====================
 
 Visit `<https://download.grommunio.com>`_ to get an idea of the list of platforms for
-which pre-built packages have been made available. Even though different
-operating systems may use the same archive format (RPM, DEB, etc.) or
-repository metadata formats (rpm-md, apt), do not use a repository which does
-not exactly match your system. Do not use Debian packages for an Ubuntu system
+which pre-built packages have been made available. Different
+operating systems may use the same archive format (RPM, DEB, etc.), or
+the same repository metadata formats (such as rpm-md, apt). However,
+do not use a repository which does
+not _exactly match_ your system. Do not use Debian packages for an Ubuntu system
 or vice-versa. Do not use openSUSE packages for a Fedora system or vice-versa.
 Do not even remotely think of converting between formats.
 
