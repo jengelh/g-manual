@@ -2,6 +2,44 @@
 Outlook 2010/2013 setup and the quirks
 ======================================
 
+Preface summary
+---------------
+
+At the end of May 2022, this document's German screenshots were slated for
+replacement with the English version. In that attempt, more weirdness
+protruded.
+
+1. English OL2013 15.0.5125.1000 / MAPI 15.0.5449:
+
+	AutoDiscover handler offering MH:
+
+		AutoDiscover completes, MAPI profile runs on MH,
+		no traces of RPCH configuration found. All good.
+
+	ADH offering only RPCH:
+
+		The wizard fails the Autodiscover stage.
+		Eventually leads you over to manual setup mode.
+
+	Manual setup:
+
+		The wizard is somehow completely unable to make a successful
+		RPCH connection.
+
+2. German OL2013 (exact version tbd):
+
+AutoDiscover succeeds, you can also do manual setup, or switch to manual after
+AD has signalled success. Either way you go, the wizard somehow gets the idea
+it wants to talk to a magic hostname "SERVERS". You can end the wizard
+successfully and it believes it has a connection, but actually does not. The
+MAPI profile remains broken and the bogus RPC server name needs to be edited
+with MFCMAPI. Once *that* is done, it actually works very well over RPCH.
+
+
+
+Control Panel
+-------------
+
 Open Control Panel and the E-Mail control widget and create a new profile.
 Alternatively, new profiles can be created when launching Outlook if and
 when it shows its profile selection dialog (requires that no profile be marked
@@ -36,64 +74,98 @@ use the domain controller, which is a good thing.
 AutoDiscover
 ------------
 
-.. image:: profnodom.png
+.. image:: profnodom2.png
 
-When using automatic mode from the 4(!)-field dialog, the profile wizard
-proceeds to invoke AutoDiscover. Provided the DNS domain name resolves to a
-Gromox server, AutoDiscover should succeed, even if joined to an NT domain of
-the same name.
+When using automatic mode (i.e. the radiobox "E-mail Account") from the
+4(!)-field dialog, the profile wizard proceeds to invoke AutoDiscover. Provided
+the DNS domain name resolves to a Gromox server, AutoDiscover should succeed,
+even if joined to an NT domain of the same name.
 
-At this point, you may get a warning if you used a self-signed or otherwise not
-verifiable TLS certificate. If indeed your Gromox server uses such a
+.. image:: profdisco.png
+
+At this point, you may get a warning if you used a _self-signed_ or otherwise
+not verifiable TLS certificate. If indeed your Gromox server uses such a
 certificate, that is a good sign that AutoDiscover did indeed reach the Gromox
 server.
 
 .. image:: proftls.png
 
-You also have the option to switch to Manual Setup mode with the checkbox in
-the lower left of the dialog. We recommend you do this for understanding the
-following descriptions. Continue reading below at section "RPC hostname
-shenanigans".
+Furthermore, there may be also be a second warning. The AutoDiscovery process
+uses a number of techniques, and one of them involves testing for a DNS entry
+wherein ``autodiscover.`` is preprended to the e-mail domain you entered. If
+that DNS entry indeed exists, but is not part of the TLS certificate, the
+wizard complains about a certifiace name mismatch.
+
+.. image:: proftls2.png
+
+With TLS squared away either with a proper certificate or ignoring the issue,
+AutoDiscover ought to succeed.
+
+.. image:: profdisco2.png
+
+If you get a failure indication instead that an encrypted connection was not
+possible, that is usually an indication of a DNS or network issue, and
+attempting an unencrypted AutoDiscover request won't fix that.
+
+.. image:: profdiscf.png
+
+.. image:: profdiscf2.png
+
+.. image:: profdiscf3.png
+
+.. image:: profdiscf4.png
+
+Turning the attention back to the successful AutoDiscover dialog form (with the
+three green checkmarks), you have the option to switch to manual setup mode
+using the "Change account settings" checkbox in the lower left of the dialog.
+Doing so will make the wizard switch to the next dialog state, titled "Server
+settings".
+
+.. image:: profdisco3.png
+
+Since this is a technical documentation exploring the quirks of Outlook, we
+recommend you do this for understanding the following descriptions. Continue
+reading below at section "RPC hostname troubles".
 
 
 Manual Setup
 ------------
 
-If you choose "Manual Setup", you will skip AutoDiscover. The consequence of
-doing so is that you will not get Non-Default Stores (e.g. Shared Mailboxes)
-and will not get Public Folders this time around by default. That is to say, if
-Outlook does an AutoDiscover request at some later time, the MAPI profile may
-still be autoextended by those other stores.
+If you choose the radiobox "Manual Setup", AutoDiscover will be skipped.
 
 .. image:: profmanual1.png
 
 .. image:: profmanual2.png
 
-After choosing the Exchange server type radio box, you will proceed to the RPC
-detail dialog. You should input the server and user name. The OL2013 profile
-wizard defaults to using RPC over port 135, which is not supported by Gromox,
-and so using "Check Name" will not function just yet.
+After choosing the Exchange server type radio box, you will proceed to the
+"Server Settings" view. You should input the server and user name. The OL2013
+profile wizard defaults to using RPC over port 135, which is not supported by
+Gromox, and so using "Check Name" will not function just yet.
 
-.. image:: profrpc.png
+.. image:: profserv2.png
 
-Instead, go to "More Settings" and its Security notebook page, and set "Anonymous
-Authentication".
+Instead, go to "More Settings" and its Security notebook page, and select
+"Anonymous Authentication" from the dropdown.
 
 .. image:: profproxy1.png
 
-Next, goto More Setting's "Connection" notebook page, enter the server name
-*again* in the HTTP field, and switch from "NTLM Authentication" to "Basic
-Authentication".
+Next, goto More Setting's "Connection" notebook page, enable "Connect using
+HTTP", and call up the "Proxy Settings" subdialog.
 
 .. image:: profproxy2.png
 
 .. image:: profproxy3.png
+
+Enter the server name *again* in the HTTP field, and switch from "NTLM
+Authentication" to "Basic Authentication".
 
 You should enable both "On fast networks, connect using HTTP first" and "On
 slow networks, connect using HTTP first".
 
 "Connect using HTTP first, then use TCP/IP" is a misnomer; what it really means
 "Connecting using RPCHTTP or MAPIHTTP first, then try RPC-over-TCP".
+
+.. image: profproxy4.png
 
 You can close the More Settings subdialog(s).
 
@@ -102,8 +174,19 @@ should “resolve”, i.e. become underlined. The server name will also change t
 an uncanny value of ``SERVERS``.
 
 
-RPC hostname shenanigans
-------------------------
+RPC hostname troubles
+---------------------
+
+If AutoDiscover found the MH/RPCH transport just fine, the "Server Settings"
+dialog will show `someguid@domain` in the Server field and the email address in
+the username field. In addition, under "More Settings", there will only be
+*three* tabs and no way to call up the RPC proxy settings.
+
+.. image:: profdisco5.png
+
+.. image:: profdisco6.png
+
+Now for the odd case with at least one OL2013 variant (German):
 
 Whether you have done Manual Setup or reached this point through AutoDiscover,
 you will notice that the RPC server has been changed to the value ``SERVERS``.
